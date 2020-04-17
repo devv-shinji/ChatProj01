@@ -53,7 +53,7 @@ public class Sender extends Thread{
 							if(s3.equals(s2)){
 								break;
 							}
-							out.println(s2+ " " +s3);
+							out.println(URLEncoder.encode(s2, "UTF-8")+ " " +URLEncoder.encode(s3, "UTF-8"));
 						}
 					}
 					//1회용 귓속말 포함 일반 메세지
