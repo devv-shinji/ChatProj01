@@ -24,34 +24,45 @@ public class Sender extends Thread{
 			System.out.println("예외>Sender>생성자:"+ e);
 		}
 	}
+	
 	@Override
 	public void run() {
 		Scanner s = new Scanner(System.in);
-		
 		try {
-			
 			//클라이언트가 입력한 이름(대화명)을 서버로 전송한다.
 			out.println(URLEncoder.encode(name, "UTF-8"));
 			
-			//Q를 입력하기 전까지의 메세지를 서버로 전송한다.
+			//채팅 메세지 입력
 			while(out != null) {
 				try {
 					String s2 = s.nextLine();
 					s2 = URLDecoder.decode(s2, "UTF-8");
+					String[] msgArr = s2.split(" ");
+					
 					//Q입력시 퇴장
 					if(s2.equalsIgnoreCase("Q")) {
 						break;
 					}
-					//메세지 내용 없을 때 처리(서버전송 안됨. 채팅창 출력 안됨)
-					else if(s2.equals("")) {
+					
+					//고정귓속말. 고정해제 전까지 메세지를 계속 입력받는다.
+					else if (s2.startsWith("/to") && msgArr.length==2) {
+						while(true) {
+							String s3 = s.nextLine();
+							s3 = URLDecoder.decode(s3, "UTF-8");
+							
+							if(s3.equals(s2)){
+								break;
+							}
+							out.println(s2+ " " +s3);
+						}
 					}
+					//1회용 귓속말 포함 일반 메세지
 					else {
 						out.println(URLEncoder.encode(s2, "UTF-8"));
 					}
-				}
-				catch(UnsupportedEncodingException e) {
 					
 				}
+				catch(UnsupportedEncodingException e) {}
 				catch(Exception e) {
 					System.out.println("예외>Sender>run1:"+ e);
 				}

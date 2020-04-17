@@ -21,7 +21,7 @@ import java.util.Scanner;
 import java.util.Set;
 
 public class MultiServer {
-	
+	Scanner scan = new Scanner(System.in);
 	static ServerSocket serverSocket = null;
 	static Socket socket = null;
 	//클라이언트의 정보 저장을 위한 Map컬렉션 정의
@@ -39,6 +39,14 @@ public class MultiServer {
 		Collections.synchronizedMap(clientMap);
 	}
 
+	
+	//메인메소드: Server객체를 생성한 후 초기화한다.
+	public static void main(String[] args) {
+		MultiServer ms = new MultiServer();
+		dbconnect = new DBconnect();
+		ms.init();
+	}
+	
 	//서버의 초기화를 담당할 메소드
 	public void init() {
 		
@@ -76,13 +84,6 @@ public class MultiServer {
 		}
 	}
 	
-	//메인메소드: Server객체를 생성한 후 초기화한다.
-	public static void main(String[] args) {
-		MultiServer ms = new MultiServer();
-		dbconnect = new DBconnect();
-		ms.init();
-	}
-	
 	//접속된 모든 클라이언트에게 메세지를 전달하는 역할의 메소드
 	public void sendAllMsg (String name, String msg) {
 		
@@ -94,11 +95,6 @@ public class MultiServer {
 				//각 클라이언트의 PrintWriter객체를 얻어온다.
 				PrintWriter it_out = (PrintWriter) clientMap.get(it.next());
 				
-				//클라이언트에게 메세지를 전달한다.
-				/*
-				매개변수 name이 있는 경우에는 이름+메세지
-				없는 경우에는 메세지만 클라이언트로 전달한다.
-				 */
 				if(name.equals("")) {
 					it_out.println(URLEncoder.encode(msg, "UTF-8"));
 				}
@@ -113,8 +109,8 @@ public class MultiServer {
 		}
 	}////sendAllMsg
 	
+	//모든 접속자 출력하여 명령요청한 클라이언트에게만 Echo (/list 명령어) 
 	public void sendSelfMsg (String name, String msg) {
-		
 		Iterator<String> it = clientMap.keySet().iterator();
 		
 		//저장된 객체의 갯수만큼 반복한다.
@@ -126,7 +122,6 @@ public class MultiServer {
 				PrintWriter self_out = null; //해당접속자 밸류값
 				
 				if(name.equals(ClientName)) {
-					
 					Iterator<String> it2 = clientMap.keySet().iterator();
 					while(it2.hasNext()) {
 						it_out.println(it2.next());
@@ -137,34 +132,26 @@ public class MultiServer {
 				System.out.println("예외:"+ e);
 			}
 		}
-		
 	}////sendSelfMsg
 	
-	
+	//귓속말 처리 (/to 대화명) (/to 대화명 메세지)
 	public void sendSecretMsg (String name, String msg) {
 		//Map에 저장된 객체(클라이언트)의 키값(이름)을 먼저 얻어온다.
 		Iterator<String> it = clientMap.keySet().iterator();
+		BufferedReader in = null;
 		String toName = null;
 		String toMessage = null;
 		
-		if(msg.startsWith("/to")) {
-			
-			String[] msgArr = msg.split(" ");
-			toName = msgArr[1];
-						
-			//명령어와 이름만 입력되었을 때. (귓속말 고정)
-			if(msgArr.length == 2){
-				Scanner scan = new Scanner(System.in);
-				String secretFix = scan.nextLine();
-				toMessage = secretFix;
-			}
-			else {
-				for (int e=3; e<msgArr.length; e++) {
-					toMessage = msgArr[2];
-					toMessage += " " + msgArr[e];
-				}
-			}
+		//받아온 메세지를 배열형태로 split하여 저장
+		String[] msgArr = msg.split(" ");
+		toName = msgArr[1];
+		toMessage = msgArr[2];
+		
+		//배열 속 나눠진 메세지를 하나의 문장으로 저장
+		for (int e=3; e<msgArr.length; e++) {
+			toMessage += " " + msgArr[e];
 		}
+	
 		//저장된 객체의 갯수만큼 반복한다.
 		while(it.hasNext()) {
 			try {
@@ -173,12 +160,13 @@ public class MultiServer {
 				PrintWriter it_out = (PrintWriter) clientMap.get(ClientName);
 				
 				if(toName.equals(ClientName)) {
-					it_out.println(URLEncoder.encode(toMessage, "UTF-8"));
+					it_out.println(name+">> " + URLEncoder.encode(toMessage, "UTF-8"));
 				}
 			}
+			catch (NullPointerException e) {}
 			catch (UnsupportedEncodingException e1) {}
 			catch(Exception e) {
-				System.out.println("예외:"+ e);
+				System.out.println("예외2:"+ e);
 			}
 		}
 	}////sendSecretMsg
@@ -209,18 +197,23 @@ public class MultiServer {
 			String name = "";
 			//메세지 저장용 변수
 			String s = "";
+			boolean flag = true;
 			
 			try {
 				//클라이언트의 이름을 읽어와서 저장
 				name = in.readLine();
 				name = URLDecoder.decode(name, "UTF-8");
-				
-				//접속한 클라이언트에게 새로운 사용자의 입장을 알림.
-				//신규 접속자는 아직 HashMap에 저장이 되지 않았으므로 아래 출력메세지는 기존 접속자에게만 전송된다.
-				//접속자를 제외한 나머지 클라이언트만 입장메세지를 받는다.
-				sendAllMsg("", name +"님이 입장하셨습니다.");
-				
+
 				//현재 접속한(신규) 클라이언트를 HashMap에 저장한다.
+				while(clientMap.containsKey(name)) {
+					out.println("동일한 대화명이 존재합니다.");
+					out.println("이름을 입력하세요:");
+					//클라이언트의 이름을 읽어와서 저장
+					name = in.readLine();
+					name = URLDecoder.decode(name, "UTF-8");
+				}
+					
+				sendAllMsg("", name +"님이 입장하셨습니다.");
 				clientMap.put(name, out);
 				
 				//HashMap에 저장된 객체의 수로 접속자 수를 파악할 수 있다.
@@ -233,24 +226,29 @@ public class MultiServer {
 					s = in.readLine();
 					s = URLDecoder.decode(s, "UTF-8");
 					
-					if(s == null) break;
-					
-					if(s.equalsIgnoreCase("/list")) {
-						sendSelfMsg(name, s);
-					}
-					else if(s.startsWith("/to")) {
-						sendSecretMsg(name, s);
+					if(s == null) {
+						break;
 					}
 					else {
-						System.out.println(name  +" >>"+ s);
-						sendAllMsg(name, s);
+						if(s.equalsIgnoreCase("/list")) {
+							sendSelfMsg(name, s);
+						}
+						else if(s.startsWith("/to")) {
+							sendSecretMsg(name, s);
+						}
+						else {
+							sendAllMsg(name, s);
+						}
+						System.out.println(name +" >>"+ s);
+						/////JDBC 쿼리문 실행을 위한 매개변수 (이름/메세지) 전달
 						dbconnect.execute(name, s);							
 					}
 				}
-				
 			}
+			catch (NullPointerException e) {}
 			catch (Exception e) {
-				System.out.println("예외:" + e);
+				System.out.println("여긴가요1");
+				System.out.println("//예외:" + e);
 			}
 			finally {
 				/*
@@ -275,6 +273,5 @@ public class MultiServer {
 		}
 		
 	}////end of thread
-	
 }		
 
